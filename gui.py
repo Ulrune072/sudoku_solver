@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox, filedialog
-import csv
+from io_utils import read_csv_to_grid, read_txt_to_grid  # Import io_utils functions
 from solver import solve_sudoku
 
 CELL_SIZE = 50
@@ -51,7 +51,7 @@ class SudokuGUI:
         button_frame = tk.Frame(self.root)
         button_frame.pack(pady=10)
 
-        tk.Button(button_frame, text="Load CSV", command=self.load_csv).grid(row=0, column=0, padx=5)
+        tk.Button(button_frame, text="Load File", command=self.load_file).grid(row=0, column=0, padx=5)
         tk.Button(button_frame, text="Solve", command=self.solve).grid(row=0, column=1, padx=5)
         tk.Button(button_frame, text="Clear", command=self.clear).grid(row=0, column=2, padx=5)
 
@@ -82,14 +82,25 @@ class SudokuGUI:
                 e.delete(0, tk.END)
         self.status_label.config(text="")
 
-    def load_csv(self):
-        file_path = filedialog.askopenfilename(filetypes=[("CSV Files", "*.csv")])
+    def load_file(self):
+        file_path = filedialog.askopenfilename(filetypes=[("CSV Files", "*.csv"), ("Text Files", "*.txt")])
         if not file_path:
             return
-        with open(file_path, "r") as f:
-            reader = csv.reader(f)
-            grid = [[int(x) if x else 0 for x in row] for row in reader]
-        self.write_grid_to_ui(grid)
+        try:
+            # Check file extension and use appropriate reader
+            if file_path.endswith('.csv'):
+                grid = read_csv_to_grid(file_path)
+            elif file_path.endswith('.txt'):
+                grid = read_txt_to_grid(file_path)
+            else:
+                messagebox.showerror("Error", "Unsupported file type. Use .csv or .txt.")
+                return
+            self.write_grid_to_ui(grid)
+            self.status_label.config(text="File loaded successfully.")
+        except ValueError as e:
+            messagebox.showerror("Error", str(e))
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load file: {str(e)}")
 
     def solve(self):
         grid = self.get_grid_from_ui()
@@ -101,7 +112,6 @@ class SudokuGUI:
         self.status_label.config(
             text=f"Solved in {stats['time']:.3f}s | Steps: {stats['steps']} | Backtracks: {stats['backtracks']}"
         )
-
 
 if __name__ == "__main__":
     root = tk.Tk()
